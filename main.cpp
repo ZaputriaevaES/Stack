@@ -5,13 +5,13 @@ int main()
     FILE * logFile = fopen("logFile.txt", "w+");
     assert(logFile != NULL);
 
-    stack stk1 = {NULL, -1, -1, 0, __LINE__, __FUNCTION__};
+    stack stk1 = {0};
 
     stackCtor(&stk1, 6);
 
-    int i = 0;
+    size_t i = 0;
 
-    for (i = 0; i < 100; i++)
+    for (i = 0; i < 50; i++)
     {
         stackPush(&stk1, i);
     }
@@ -24,7 +24,7 @@ int main()
 
     int value = 0;
 
-    for (i = 0; i < 100; i++)
+    for (i = 0; i < 50; i++)
     {
         stackPop(&stk1, &value);
         printf("%6d-%3d", value, stk1.capacity);

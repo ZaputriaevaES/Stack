@@ -85,21 +85,21 @@ enum errors
 };
 
 
-int stackCtor_  (stack * stackN, size_t sizeStackN, const char * nameStack,const char * namecreatFunk,
-                                                    int creatLine, const char * nameCreatFile);
+void stackCtor_  (stack * stackN, size_t sizeStackN, const char * nameStack,
+                 const char * namecreatFunk, int creatLine, const char * nameCreatFile);
 
-int stackPush   (stack * stackN, size_t value);
+void stackPush   (stack * stackN, size_t value);
 
-int stackPop    (stack * stackN, int * value);
+void stackPop    (stack * stackN, int * value);
 
-int stackResize (stack * stackN);
+void stackResize (stack * stackN);
 
-int stackDump_  (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile);
+void stackDump_  (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile);
 
-int errorDecod  (stack * stackN);
+void errorDecod  (stack * stackN);
 
-int errorOutput (int i);
+void errorOutput (int i);
 
-int stackDtor   (stack * stackN);
+void stackDtor   (stack * stackN);
 
 #endif // STACKFUNCTIONS_H_INCLUDED

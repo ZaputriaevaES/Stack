@@ -4,7 +4,21 @@
 extern FILE * logFile = fopen("logFile.txt", "w+");
 
 #if MODE == HASH || MODE == CANARY_HASH
-static unsigned long long hashFunc (void * pointObject, size_t sizeObject);
+static unsigned long long hashFunc (void * pointObject, size_t sizeObject)
+{
+    assert(pointObject != NULL);
+
+    unsigned long long hashValue = 0;
+
+    unsigned char * point = (unsigned char *) pointObject;
+
+    for(size_t i = 0; i < sizeObject; i += 10)
+    {
+        hashValue += point[sizeObject];
+    }
+
+    return hashValue;
+}
 #endif
 
 #if MODE == CANARY || MODE == CANARY_HASH
@@ -51,7 +65,7 @@ static stkElem  * recreatStackData(stack * stackN)
 }
 #endif
 
-int stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, const char * nameCreatFunk, int creatLine, const char * nameCreatFile)
+void stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, const char * nameCreatFunk, int creatLine, const char * nameCreatFile)
 {
     assert(stackN != NULL);
 
@@ -92,12 +106,13 @@ int stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, const
     stackN->hashStack = hashFunc(stackN, sizeof(*stackN) - sizeof(unsigned long long));
     #endif
 
-    stackDump(stackN);
+    //printf("%x\n", ((unsigned long long *)stackN->data)[-1]);
+    //printf("%x\n", ((unsigned long long *)stackN->data)[(stackN->capacity) * sizeof(stkElem) / sizeof(unsigned long long)] );
 
-    return 0;
+    stackDump(stackN);
 }
 
-int stackPush (stack * stackN, size_t value)
+void stackPush (stack * stackN, size_t value)
 {
     assert(stackN != NULL);
 
@@ -108,11 +123,9 @@ int stackPush (stack * stackN, size_t value)
     stackN->data[stackN->size++] = value;
 
     stackDump(stackN);
-
-    return 0;
 }
 
-int stackPop (stack * stackN, int * value)
+void stackPop (stack * stackN, int * value)
 {
     assert(stackN != NULL);
 
@@ -134,11 +147,9 @@ int stackPop (stack * stackN, int * value)
     }
 
     stackDump(stackN);
-
-    return 0;
 }
 
-int stackResize (stack * stackN)
+void stackResize (stack * stackN)
 {
     assert(stackN != NULL);
 
@@ -163,15 +174,13 @@ int stackResize (stack * stackN)
     stackN->hashStack = hashFunc(stackN, sizeof(*stackN) - sizeof(unsigned long long));
     #endif
 
-    for (int i = stackN->size; i < stackN->capacity; i++)
+    for (size_t i = stackN->size; i < stackN->capacity; i++)
         stackN->data[i] = elemPoison;
 
     stackDump(stackN);
-
-    return 0;
 }
 
-int stackDump_ (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile)
+void stackDump_ (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile)
 {
     assert(stackN != NULL);
 
@@ -211,15 +220,13 @@ int stackDump_ (stack * stackN, const char * nameCallFunk, int callLine, const c
                               stackN->warInfo.nameCreatFunk,
                               stackN->warInfo.creatLine, stackN->warInfo.nameCreatFile);
 
-        for (int i = 0; i < stackN->capacity; i++) fprintf(logFile, "data[%d] = %d\n", i, stackN->data[i]);
+        for (size_t i = 0; i < stackN->capacity; i++) fprintf(logFile, "data[%d] = %d\n", i, stackN->data[i]);
     }
 
     else errorDecod(stackN);
-
-    return 0;
 }
 
-int errorDecod (stack * stackN)
+void errorDecod (stack * stackN)
 {
     unsigned long long sumError = stackN->errorMask;
 
@@ -237,19 +244,15 @@ int errorDecod (stack * stackN)
                               stackN->warInfo.creatLine, stackN->warInfo.nameCreatFile);
         }
 
-        if(a >= sumError) return 1;
-
         if((sumError - a)%(a*2) == 0)
         {
             errorOutput(i);
             sumError -= a;
         }
     }
-
-    return 1;
 }
 
-int errorOutput (int i)
+void errorOutput (int i)
 {
 
 	switch (i) {
@@ -283,11 +286,9 @@ int errorOutput (int i)
 	default:
 		fprintf(logFile, "no such error exists  ");
 	}
-
-    return 1;
 }
 
-int stackDtor (stack * stackN)
+void stackDtor (stack * stackN)
 {
     assert(stackN != NULL);
 
@@ -302,24 +303,4 @@ int stackDtor (stack * stackN)
     stackN->data = NULL;
 
     stackN = NULL;
-
-    return 0;
 }
-
-#if MODE == HASH || MODE == CANARY_HASH
-static unsigned long long hashFunc (void * pointObject, size_t sizeObject)
-{
-    assert(pointObject != NULL);
-
-    unsigned long long hashValue = 0;
-
-    unsigned char * point = (unsigned char *) pointObject;
-
-    for(size_t i = 0; i < sizeObject; i += 10)
-    {
-        hashValue += point[sizeObject];
-    }
-
-    return hashValue;
-}
-#endif

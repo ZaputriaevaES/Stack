@@ -1,7 +1,8 @@
 #include "stackFunctions.h"
-#include <math.h>
 
 extern FILE * logFile = fopen("logFile.txt", "w+");
+
+static void * recalloc(void * memoryPtr, size_t numElem, size_t sizeElem);
 
 #if MODE == HASH || MODE == CANARY_HASH
 static unsigned long long hashFunc (void * pointObject, size_t sizeObject)
@@ -12,7 +13,7 @@ static unsigned long long hashFunc (void * pointObject, size_t sizeObject)
 
     unsigned char * point = (unsigned char *) pointObject;
 
-    for(size_t i = 0; i < sizeObject; i += 10)
+    for(size_t i = 0; i < sizeObject; i += 27)
     {
         hashValue += point[sizeObject];
     }
@@ -49,7 +50,7 @@ static stkElem  * recreatStackData(stack * stackN)
 
     stackData--;
 
-    stackData = (unsigned long long *) realloc(stackData, (sizeof(leftDataCanary) + stackN->capacity * sizeof(stkElem) + sizeof(rightDataCanary)));
+    stackData = (unsigned long long *) recalloc(stackData, (sizeof(leftDataCanary) + stackN->capacity * sizeof(stkElem) + sizeof(rightDataCanary)), 1);
 
     if (stackData == NULL)
     {
@@ -65,6 +66,22 @@ static stkElem  * recreatStackData(stack * stackN)
 }
 #endif
 
+static void * recalloc(void * memoryPtr, size_t numElem, size_t sizeElem)
+{
+    assert(memoryPtr != NULL);
+
+    size_t allMemorySize = numElem * sizeElem;
+
+    size_t busyMemorySize = _msize(memoryPtr);
+
+    memoryPtr = realloc(memoryPtr, allMemorySize);
+
+    if (allMemorySize > busyMemorySize)
+        memset((char *)memoryPtr + busyMemorySize, 0, allMemorySize - busyMemorySize);
+
+    return memoryPtr;
+}
+
 void stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, const char * nameCreatFunk, int creatLine, const char * nameCreatFile)
 {
     assert(stackN != NULL);
@@ -79,15 +96,17 @@ void stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, cons
     stackN->warInfo.creatLine     = creatLine;
     stackN->warInfo.nameCreatFile = nameCreatFile;
 
-    stackN->capacity = sizeStackN;
-    stackN->size     = 0;
+    if(sizeStackN >= 16) stackN->capacity = sizeStackN;
+    else stackN->capacity = 16;
+
+    stackN->size = 0;
 
     #if MODE == CANARY || MODE == CANARY_HASH
     stackN->data = creatStackData(stackN);
     #endif
 
     #if MODE == RELIZE || MODE == HASH
-    stackN->data = (stkElem *)calloc(sizeStackN, sizeof(stkElem));
+    stackN->data = (stkElem *)calloc(stackN->capacity, sizeof(stkElem));
 
     if (stackN->data == NULL)
     {
@@ -96,7 +115,7 @@ void stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, cons
     }
     #endif
 
-    for (int i = 0; i < sizeStackN; i++)
+    for (size_t i = 0; i < stackN->capacity; i++)
     {
         stackN->data[i] = elemPoison;
     }
@@ -141,7 +160,7 @@ void stackPop (stack * stackN, int * value)
 
         *value = stackN->data[stackN->size];
 
-        stackN->data[stackN->size] = -111;
+        stackN->data[stackN->size] = elemPoisonClean;
 
         if (stackN->size <= stackN->capacity/4 && stackN->size >= 16) stackResize(stackN);
     }
@@ -164,7 +183,7 @@ void stackResize (stack * stackN)
     #endif
 
     #if MODE == RELIZE || MODE == HASH
-    stackN->data = (stkElem *)realloc(stackN->data, (stackN->capacity) * sizeof(stkElem));
+    stackN->data = (stkElem *)recalloc(stackN->data, (stackN->capacity) * sizeof(stkElem), 1);
     #endif
 
     if (stackN->data == NULL) stackN->errorMask += OUT_OF_MEMORY;
@@ -241,7 +260,7 @@ void errorDecod (unsigned long long sumError)
 
     for (size_t i = 0; i<= sizeof(int)*8; i++)
     {
-        if((error >> i) & 1 == 1)
+        if(((error >> i) & 1) == 1)
         {
             errorOutput(i);
         }
@@ -293,7 +312,7 @@ void stackDtor (stack * stackN)
 
     stackN->capacity = -1;
 
-    stackN->warInfo = {};
+    stackN->warInfo = {0,0,0,0,0,0,0};
 
     free(stackN->data);
 

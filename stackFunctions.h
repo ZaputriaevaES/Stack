@@ -6,14 +6,14 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
-#include <sys/stat.h>
+#include <malloc.h>
 
 #define RELIZE 1
 #define CANARY 2
 #define HASH 3
 #define CANARY_HASH 4
 
-#define MODE CANARY
+#define MODE CANARY_HASH
 
 #if MODE == CANARY || MODE == CANARY_HASH
 #define leftStkCanary   (unsigned long long)((unsigned long long)stackN | 0xDEADBABE)
@@ -22,7 +22,8 @@
 #define rightDataCanary (unsigned long long)0xBAADF00D
 #endif
 
-#define elemPoison (unsigned long long)0xDEADDEAD
+#define elemPoison      45629746
+#define elemPoisonClean 69873621
 
 #define stackCtor(stk, size) stackCtor_((stk), (size), #stk+1, __FUNCTION__, __LINE__, __FILE__);
 

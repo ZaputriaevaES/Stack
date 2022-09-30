@@ -7,7 +7,7 @@ int main()
 
     stack stk1 = {0};
 
-    stackCtor(&stk1, 6);
+    stackCtor(&stk1, 16);
 
     size_t i = 0;
 

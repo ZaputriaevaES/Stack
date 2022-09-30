@@ -96,7 +96,7 @@ void stackResize (stack * stackN);
 
 void stackDump_  (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile);
 
-void errorDecod  (stack * stackN);
+void errorDecod  (unsigned long long sumError);
 
 void errorOutput (int i);
 

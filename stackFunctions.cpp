@@ -223,32 +223,29 @@ void stackDump_ (stack * stackN, const char * nameCallFunk, int callLine, const 
         for (size_t i = 0; i < stackN->capacity; i++) fprintf(logFile, "data[%d] = %d\n", i, stackN->data[i]);
     }
 
-    else errorDecod(stackN);
-}
-
-void errorDecod (stack * stackN)
-{
-    unsigned long long sumError = stackN->errorMask;
-
-    for(int i = 0; sumError > 0; i++)
+    else
     {
-        unsigned long long a = pow(2, i);
+        errorDecod(stackN->errorMask);
 
-        if(a == sumError)
-        {
-            errorOutput(i);
-            fprintf(logFile, "in stack[%p] \"%s\" called at %s(%d) in %s, \ncreated at %s(%d) in %s\n",
+        fprintf(logFile, "in stack[%p] \"%s\" called at %s(%d) in %s, \ncreated at %s(%d) in %s\n",
                               &stackN, stackN->warInfo.nameStack, stackN->warInfo.nameCallFunk,
                               stackN->warInfo.callLine, stackN->warInfo.nameCallFile,
                               stackN->warInfo.nameCreatFunk,
                               stackN->warInfo.creatLine, stackN->warInfo.nameCreatFile);
-        }
+    }
+}
 
-        if((sumError - a)%(a*2) == 0)
+void errorDecod (unsigned long long sumError)
+{
+    unsigned long long error = sumError;
+
+    for (size_t i = 0; i<= sizeof(int)*8; i++)
+    {
+        if((error >> i) & 1 == 1)
         {
             errorOutput(i);
-            sumError -= a;
         }
+        error = sumError;
     }
 }
 

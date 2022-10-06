@@ -1,106 +1,32 @@
 #ifndef STACKFUNCTIONS_H_INCLUDED
 #define STACKFUNCTIONS_H_INCLUDED
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <ctype.h>
-#include <malloc.h>
+#include "utilities.h"
 
-#define RELIZE 1
-#define CANARY 2
-#define HASH 3
-#define CANARY_HASH 4
+int  calculate_hash (void * obj, size_t size);
+void calculate_stack_hash (stack * stackN);
+int update_stack_hash (stack *stackN);
+int update_data_hash (stack *stackN);
+bool check_stack_hash (stack *stackN);
+maskType stack_ok (stack *stackN);
+unsigned short canary_ok (stack *stackN);
+unsigned short data_canary_ok (stack *stackN);
 
-#define MODE CANARY_HASH
+void stackCtor_   (stack * stackN, size_t sizeStackN, const char * nameStack,
+                  const char * namecreatFunk, int creatLine, const char * nameCreatFile);
 
-#if MODE == CANARY || MODE == CANARY_HASH
-#define leftStkCanary   (unsigned long long)((unsigned long long)stackN | 0xDEADBABE)
-#define rightStkCanary  (unsigned long long)((unsigned long long)stackN | 0xBADDCAFE)
-#define leftDataCanary  (unsigned long long)0xDEADBEEF
-#define rightDataCanary (unsigned long long)0xBAADF00D
-#endif
+void stackPush    (stack * stackN, size_t value);
 
-#define elemPoison      45629746
-#define elemPoisonClean 69873621
+void stackPop     (stack * stackN, int * value);
 
-#define stackCtor(stk, size) stackCtor_((stk), (size), #stk+1, __FUNCTION__, __LINE__, __FILE__);
+void stackResize  (stack * stackN);
 
-#define stackDump(stk) stackDump_ ((stk), __FUNCTION__, __LINE__, __FILE__);
+void stackDump_   (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile);
 
-typedef int stkElem;
+void stackDtor    (stack * stackN);
 
-typedef struct warrningInfo
-{
-    const char * nameStack;
+void * recalloc   (void * memoryPtr, size_t numElem, size_t sizeElem);
 
-    int          creatLine;
-    const char * nameCreatFunk;
-    const char * nameCreatFile;
-
-    int          callLine;
-    const char * nameCallFunk;
-    const char * nameCallFile;
-};
-
-typedef struct stack
-{
-    #if MODE == CANARY || MODE == CANARY_HASH
-    unsigned long long leftStackCanary;
-    #endif
-
-    stkElem * data;
-    size_t    size;
-    size_t    capacity;
-
-    warrningInfo warInfo;
-
-    unsigned long long errorMask;
-
-    #if MODE == HASH || MODE == CANARY_HASH
-    unsigned long long hashData;
-    #endif
-
-    #if MODE == CANARY || MODE == CANARY_HASH
-    unsigned long long rightStackCanary;
-    #endif
-
-    #if MODE == HASH || MODE == CANARY_HASH
-    unsigned long long hashStack;
-    #endif
-};
-
-enum errors
-{
-    STRUCT_POINTER_NOT_FOUND = 1,
-    DATA_POINTER_NOT_FOUND   = 2,
-    STACK_OVERFLOW           = 4,
-    STACK_UNDERFLOW          = 8,
-    OUT_OF_MEMORY            = 16,
-    LEFT_STK_CANARY_ERROR    = 32,
-    RIGHT_STK_CANARY_ERROR   = 64,
-    LEFT_DATA_CANARY_ERROR   = 128,
-    RIGHT_DATA_CANARY_ERROR  = 256,
-
-};
-
-
-void stackCtor_  (stack * stackN, size_t sizeStackN, const char * nameStack,
-                 const char * namecreatFunk, int creatLine, const char * nameCreatFile);
-
-void stackPush   (stack * stackN, size_t value);
-
-void stackPop    (stack * stackN, int * value);
-
-void stackResize (stack * stackN);
-
-void stackDump_  (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile);
-
-void errorDecod  (unsigned long long sumError);
-
-void errorOutput (int i);
-
-void stackDtor   (stack * stackN);
+hashType hashFunc (void * pointObject, size_t sizeObject);
 
 #endif // STACKFUNCTIONS_H_INCLUDED

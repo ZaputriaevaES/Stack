@@ -2,7 +2,7 @@
 
 int main()
 {
-    FILE * logFile = fopen("logFile.txt", "w+");
+    FILE * logFile = fopen("logFile.txt", "w+"); // log file ctor
     assert(logFile != NULL);
 
     stack stk1 = {0};

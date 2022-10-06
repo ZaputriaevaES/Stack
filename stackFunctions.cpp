@@ -2,32 +2,14 @@
 
 extern FILE * logFile = fopen("logFile.txt", "w+");
 
-static void * recalloc(void * memoryPtr, size_t numElem, size_t sizeElem);
 
-#if MODE == HASH || MODE == CANARY_HASH
-static unsigned long long hashFunc (void * pointObject, size_t sizeObject)
-{
-    assert(pointObject != NULL);
-
-    unsigned long long hashValue = 0;
-
-    unsigned char * point = (unsigned char *) pointObject;
-
-    for(size_t i = 0; i < sizeObject; i += 27)
-    {
-        hashValue += point[sizeObject];
-    }
-
-    return hashValue;
-}
-#endif
 
 #if MODE == CANARY || MODE == CANARY_HASH
 static stkElem  * creatStackData(stack * stackN)
 {
     assert(stackN != NULL);
 
-    unsigned long long * stackData = (unsigned long long *)calloc(1, (sizeof(leftDataCanary) + stackN->capacity * sizeof(stkElem) + sizeof(rightDataCanary)));
+    canaryType * stackData = (canaryType *)calloc(1, (2*sizeof(canaryType) + stackN->capacity * sizeof(stkElem)));
 
     if (stackData == NULL)
     {
@@ -37,7 +19,7 @@ static stkElem  * creatStackData(stack * stackN)
 
     stackData[0] = leftDataCanary;
     stackData++;
-    stackData[(stackN->capacity) * sizeof(stkElem) / sizeof(unsigned long long)] = rightDataCanary;
+    stackData[(stackN->capacity) * sizeof(stkElem) / sizeof(canaryType)] = rightDataCanary;  //char
 
     return (stkElem  *)stackData;
 }
@@ -50,7 +32,7 @@ static stkElem  * recreatStackData(stack * stackN)
 
     stackData--;
 
-    stackData = (unsigned long long *) recalloc(stackData, (sizeof(leftDataCanary) + stackN->capacity * sizeof(stkElem) + sizeof(rightDataCanary)), 1);
+    stackData = (unsigned long long *) recalloc(stackData, (2*sizeof(canaryType) + stackN->capacity * sizeof(stkElem)), 1);
 
     if (stackData == NULL)
     {
@@ -60,13 +42,13 @@ static stkElem  * recreatStackData(stack * stackN)
 
     stackData[0] = leftDataCanary;
     stackData++;
-    stackData[(stackN->capacity) * sizeof(stkElem) / sizeof(unsigned long long)] = rightDataCanary;
+    stackData[(stackN->capacity) * sizeof(stkElem) / sizeof(canaryType)] = rightDataCanary;
 
     return (stkElem  *)stackData;
 }
 #endif
 
-static void * recalloc(void * memoryPtr, size_t numElem, size_t sizeElem)
+void * recalloc(void * memoryPtr, size_t numElem, size_t sizeElem)
 {
     assert(memoryPtr != NULL);
 
@@ -75,6 +57,8 @@ static void * recalloc(void * memoryPtr, size_t numElem, size_t sizeElem)
     size_t busyMemorySize = _msize(memoryPtr);
 
     memoryPtr = realloc(memoryPtr, allMemorySize);
+
+    if(memoryPtr == NULL) return NULL;
 
     if (allMemorySize > busyMemorySize)
         memset((char *)memoryPtr + busyMemorySize, 0, allMemorySize - busyMemorySize);
@@ -96,13 +80,13 @@ void stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, cons
     stackN->warInfo.creatLine     = creatLine;
     stackN->warInfo.nameCreatFile = nameCreatFile;
 
-    if(sizeStackN >= 16) stackN->capacity = sizeStackN;
+    if(sizeStackN >= 16) stackN->capacity = sizeStackN; //const
     else stackN->capacity = 16;
 
     stackN->size = 0;
 
     #if MODE == CANARY || MODE == CANARY_HASH
-    stackN->data = creatStackData(stackN);
+    stackN->data = creatStackData(stackN);     //general funk
     #endif
 
     #if MODE == RELIZE || MODE == HASH
@@ -117,16 +101,12 @@ void stackCtor_ (stack * stackN, size_t sizeStackN, const char * nameStack, cons
 
     for (size_t i = 0; i < stackN->capacity; i++)
     {
-        stackN->data[i] = elemPoison;
+        stackN->data[i] = elemPoison;  //funk
     }
 
     #if MODE == HASH || MODE == CANARY_HASH
-    stackN->hashData  = hashFunc(stackN->data, sizeof(stkElem)*stackN->capacity);
-    stackN->hashStack = hashFunc(stackN, sizeof(*stackN) - sizeof(unsigned long long));
+    calculate_stack_hash (stackN);
     #endif
-
-    //printf("%x\n", ((unsigned long long *)stackN->data)[-1]);
-    //printf("%x\n", ((unsigned long long *)stackN->data)[(stackN->capacity) * sizeof(stkElem) / sizeof(unsigned long long)] );
 
     stackDump(stackN);
 }
@@ -140,6 +120,10 @@ void stackPush (stack * stackN, size_t value)
     if (stackN->size >= stackN->capacity) stackResize(stackN);
 
     stackN->data[stackN->size++] = value;
+
+    #if MODE == HASH || MODE == CANARY_HASH
+        calculate_stack_hash (stackN);
+    #endif
 
     stackDump(stackN);
 }
@@ -165,6 +149,10 @@ void stackPop (stack * stackN, int * value)
         if (stackN->size <= stackN->capacity/4 && stackN->size >= 16) stackResize(stackN);
     }
 
+    #if MODE == HASH || MODE == CANARY_HASH
+        calculate_stack_hash (stackN);
+    #endif
+
     stackDump(stackN);
 }
 
@@ -186,122 +174,16 @@ void stackResize (stack * stackN)
     stackN->data = (stkElem *)recalloc(stackN->data, (stackN->capacity) * sizeof(stkElem), 1);
     #endif
 
-    if (stackN->data == NULL) stackN->errorMask += OUT_OF_MEMORY;
-
-    #if MODE == HASH || MODE == CANARY_HASH
-    stackN->hashData  = hashFunc(stackN->data, sizeof(stkElem)*stackN->capacity);
-    stackN->hashStack = hashFunc(stackN, sizeof(*stackN) - sizeof(unsigned long long));
-    #endif
+    if (stackN->data == NULL)
+    {
+        free(stackN->data);
+        stackN->errorMask += OUT_OF_MEMORY;
+    }
 
     for (size_t i = stackN->size; i < stackN->capacity; i++)
         stackN->data[i] = elemPoison;
 
     stackDump(stackN);
-}
-
-void stackDump_ (stack * stackN, const char * nameCallFunk, int callLine, const char * nameCallFile)
-{
-    assert(stackN != NULL);
-
-    #if MODE == CANARY || MODE == CANARY_HASH
-    if(stackN->leftStackCanary  != leftStkCanary)   stackN->errorMask += LEFT_STK_CANARY_ERROR;
-    if(stackN->rightStackCanary != rightStkCanary)  stackN->errorMask += RIGHT_STK_CANARY_ERROR;
-    if (((unsigned long long *)stackN->data)[-1]   != leftDataCanary)  stackN->errorMask += LEFT_DATA_CANARY_ERROR;
-    if(((unsigned long long *)stackN->data)[(stackN->capacity) * sizeof(stkElem) / sizeof(unsigned long long)]
-                                                != rightDataCanary) stackN->errorMask += RIGHT_DATA_CANARY_ERROR;
-    #endif
-
-    stackN->warInfo.nameCallFunk = nameCallFunk;
-    stackN->warInfo.callLine     = callLine;
-    stackN->warInfo.nameCallFile = nameCallFile;
-
-    #if MODE == HASH || MODE == CANARY_HASH
-    unsigned long long hashValueNew = 0;
-
-    assert(( hashValueNew = hashFunc(stackN->data, sizeof(stkElem)*stackN->capacity) ) == stackN->hashData);
-    stackN->hashData = hashValueNew;
-
-    hashValueNew = 0;
-
-    assert(( hashValueNew = hashFunc(stackN, sizeof(*stackN) - sizeof(unsigned long long)) ) == stackN->hashStack);
-    stackN->hashStack = hashValueNew;
-    #endif
-
-    if (stackN == NULL)       stackN->errorMask += STRUCT_POINTER_NOT_FOUND;
-
-    if (stackN->data == NULL) stackN->errorMask += DATA_POINTER_NOT_FOUND;
-
-    if(stackN->errorMask == 0)
-    {
-        fprintf(logFile, "stack[%p] (OK) \"%s\" called at %s(%d) in %s, \ncreated at %s(%d) in %s\n",
-                              &stackN, stackN->warInfo.nameStack, stackN->warInfo.nameCallFunk,
-                              stackN->warInfo.callLine, stackN->warInfo.nameCallFile,
-                              stackN->warInfo.nameCreatFunk,
-                              stackN->warInfo.creatLine, stackN->warInfo.nameCreatFile);
-
-        for (size_t i = 0; i < stackN->capacity; i++) fprintf(logFile, "data[%d] = %d\n", i, stackN->data[i]);
-    }
-
-    else
-    {
-        errorDecod(stackN->errorMask);
-
-        fprintf(logFile, "in stack[%p] \"%s\" called at %s(%d) in %s, \ncreated at %s(%d) in %s\n",
-                              &stackN, stackN->warInfo.nameStack, stackN->warInfo.nameCallFunk,
-                              stackN->warInfo.callLine, stackN->warInfo.nameCallFile,
-                              stackN->warInfo.nameCreatFunk,
-                              stackN->warInfo.creatLine, stackN->warInfo.nameCreatFile);
-    }
-}
-
-void errorDecod (unsigned long long sumError)
-{
-    unsigned long long error = sumError;
-
-    for (size_t i = 0; i<= sizeof(int)*8; i++)
-    {
-        if(((error >> i) & 1) == 1)
-        {
-            errorOutput(i);
-        }
-        error = sumError;
-    }
-}
-
-void errorOutput (int i)
-{
-
-	switch (i) {
-	case 0:
-		fprintf(logFile, "structure not found,  ");
-		break;
-	case 1:
-		fprintf(logFile, "date pointer not found,  ");
-		break;
-	case 2:
-		fprintf(logFile, "stack overflow,  ");
-		break;
-	case 3:
-		fprintf(logFile, "stack underflow,  ");
-		break;
-	case 4:
-		fprintf(logFile, "failed to allocate memory,  ");
-		break;
-	case 5:
-		fprintf(logFile, "spoiled left canary in the stack,  ");
-		break;
-	case 6:
-		fprintf(logFile, "spoiled right canary in the stack,  ");
-		break;
-	case 7:
-		fprintf(logFile, "spoiled left canary in the data,  ");
-		break;
-	case 8:
-		fprintf(logFile, "spoiled left canary in the data,  ");
-		break;
-	default:
-		fprintf(logFile, "no such error exists  ");
-	}
 }
 
 void stackDtor (stack * stackN)
